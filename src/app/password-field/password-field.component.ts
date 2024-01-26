@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, forwardRef } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject, debounceTime } from 'rxjs';
 
 @Component({
@@ -7,30 +8,35 @@ import { Subject, debounceTime } from 'rxjs';
   imports: [],
   templateUrl: './password-field.component.html',
   styleUrl: './password-field.component.scss',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PasswordFieldComponent),
+      multi: true,
+    },
+  ],
 })
-export class PasswordFieldComponent {
-  private passwordSubject = new Subject<string>();
-  password = '';
+export class PasswordFieldComponent implements ControlValueAccessor {
+  public password: string | unknown;
 
-  parts = 0;
+  private onChange!: (value: string) => void;
+  private onTouched!: () => void;
 
-  constructor() {
-    this.passwordSubject.pipe(debounceTime(200)).subscribe((passwordValue) => {
-      this.password = passwordValue;
-      this.parts = 0;
-      if (passwordValue.match('([0-9])')) {
-        this.parts += 1;
-      }
-      if (passwordValue.match('([a-z])')) {
-        this.parts += 1;
-      }
-      if (passwordValue.match('([A-Z])')) {
-        this.parts += 1;
-      }
-    });
+  constructor(private readonly changeDetector: ChangeDetectorRef) {}
+
+  onInputValueChange(e: Event): void {
+    const targetDivElement = e.target as HTMLInputElement;
+    const value = targetDivElement.value;
+
+    this.onChange(value);
   }
-
-  onUpdate(e: any) {
-    this.passwordSubject.next(e.target.value);
+  writeValue(value: string): void {
+    this.password = value;
+  }
+  registerOnChange(fn: (value: string) => void): void {
+    this.onChange = fn;
+  }
+  registerOnTouched(fn: () => void): void {
+    this.onTouched = fn;
   }
 }
